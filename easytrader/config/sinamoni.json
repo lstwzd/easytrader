@@ -1,0 +1,103 @@
+{
+  "login_api": "http://weibo.com/login.php",  
+  "prefix": "http://jiaoyi.sina.com.cn/api/jsonp_v2.php/jsonp",
+
+  "userinfo": {
+    "api": "Common_Service.getMatchinfoByMatchid",
+    "matchid": "1",
+  },  
+  "position": {
+    "api": "V2_CN_Stockhold_Service.getStockhold",
+    "sid": "",
+    "cid": "",
+    "count": ""
+  },
+  "balance": {
+    "api": "Account_Service.getAccountinfo",  
+    "sid": "",
+    "contest_id": ""
+  },
+  "entrust": {
+    "api": "V2_CN_Order_Service.getOrder",
+    "sid": "",
+    "cid": "",
+    "count": "",
+    "sdate": "2017-04-16",
+    "edate": "",
+    "from": "0",
+    "count": "10",
+    "sort": "1"
+  },
+  "buy": {
+    "api": "V2_CN_Order_Service.order",
+    "type": "buy",
+    "sid": "",
+    "cid": "",
+    "symbol": "",
+    "price": "",
+    "amount": "",
+    "toweibo": "0",
+    "enc": "utf8",
+    "Referer": {
+        "url": "http://jiaoyi.sina.com.cn/jy/myMatchBuy.php",
+        "matchid": "1",
+        "cid": ""
+    }
+  },
+  "sell": {
+    "api": "V2_CN_Order_Service.order",
+    "type": "sell",
+    "sid": "",
+    "cid": "",
+    "symbol": "",
+    "price": "",
+    "amount": "",
+    "toweibo": "0",    
+    "Referer": {
+        "url": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php",
+        "matchid": "1",
+        "stockId": "",
+        "cid": ""
+    }
+  },  
+  "cancel_entrust": {
+    "api": "Order_Service.cancel",    
+    "sid": "",
+    "cid": "",
+    "order_id": ""    
+  },
+    
+  "current_deal": {
+    "api": "Transaction_Service.getTransaction",
+    "sid": "",
+    "cid": "",    
+    "sdate": "today",
+    "edate": "today",
+    "count": "",
+    "from": "0",
+    "count": "10",
+    "sort": "1"
+  },
+  "exchangebill":{
+    "api": "Transaction_Service.getTransaction",
+    "sid": "",
+    "cid": "",    
+    "sdate": "",
+    "edate": "",
+    "count": "",
+    "from": "0",
+    "count": "10",
+    "sort": "1"
+  },  
+  "statement":{
+    "api": "Statement_Service.getStatement",
+    "sid": "",
+    "cid": "",    
+    "sdate": "",
+    "edate": "",
+    "count": "",
+    "from": "0",
+    "count": "10",
+    "sort": "1"
+  }
+}

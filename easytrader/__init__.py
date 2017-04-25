@@ -5,6 +5,7 @@ from .webtrader import WebTrader
 from .yhtrader import YHTrader
 from .yjbtrader import YJBTrader
 from .gftrader import GFTrader
+from .sinamonitrader import SinaMoniTrader
 
 __version__ = '0.6.9'
 __author__ = 'shidenggui'

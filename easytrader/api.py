@@ -5,6 +5,7 @@ from .httrader import HTTrader
 from .xqtrader import XueQiuTrader
 from .yhtrader import YHTrader
 from .yjbtrader import YJBTrader
+from .sinamonitrader import SinaMoniTrader
 
 
 def use(broker, debug=True, **kwargs):
@@ -32,3 +33,5 @@ def use(broker, debug=True, **kwargs):
         return XueQiuTrader()
     if broker.lower() in ['gf', 'GF', '广发']:
         return GFTrader()
+    if broker.lower() in ['sm', 'SM', '新浪模拟盘']:
+        return SinaMoniTrader()
