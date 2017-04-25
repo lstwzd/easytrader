@@ -66,8 +66,7 @@
     "cid": "",
     "order_id": ""    
   },
-    
-  "current_deal": {
+  "deal": {
     "api": "Transaction_Service.getTransaction",
     "sid": "",
     "cid": "",    
@@ -79,17 +78,6 @@
     "sort": "1"
   },
   "exchangebill":{
-    "api": "Transaction_Service.getTransaction",
-    "sid": "",
-    "cid": "",    
-    "sdate": "",
-    "edate": "",
-    "count": "",
-    "from": "0",
-    "count": "10",
-    "sort": "1"
-  },  
-  "statement":{
     "api": "Statement_Service.getStatement",
     "sid": "",
     "cid": "",    
