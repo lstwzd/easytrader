@@ -32,6 +32,13 @@ except:
 from . import helpers
 from .webtrader import WebTrader, NotLoginError
 
+
+class GetPageError(Exception):
+    def __init__(self, result=None):
+        super(GetPageError, self).__init__()
+        self.result = result
+
+
 '''
 如果没有开启登录保护，不用输入验证码就可以登录
 如果开启登录保护，需要输入验证码
@@ -63,35 +70,18 @@ class SinaMoniTrader(WebTrader):
         super(SinaMoniTrader, self).__init__()
         self.account_config = None
         self.s = None
-
-    def __get_user_info(self):        
-        raw_name = self.account_config['userName']
-        use_index_start = 1
-        return raw_name[use_index_start:] if raw_name.startswith('08') and self.remove_zero is True else raw_name
+        self.usr_info = None
 
     def login(self, throw=False):
         """实现新浪模拟盘的自动登录"""
-        self.__go_sina_login()
 
-        verify_code = self.__handle_recognize_code()
-        if not verify_code:
-            return False
+        login_status, result = self.__go_sina_login()
+        if not login_status and throw:
+            raise NotLoginError(result)
 
-        is_login, result = self.__check_login_status(verify_code)
-        if not is_login:
-            if throw:
-                raise NotLoginError(result)
-            return False
-
-        trade_info = self.__get_trade_info()
-        if not trade_info:
-            return False
-
-        self.__set_trade_need_info(trade_info)
-
-        return True
-
-
+        self.usr_info = self.__get_user_info()
+        
+        return True        
 
     def __get_su(self, username):
         """
@@ -216,61 +206,62 @@ class SinaMoniTrader(WebTrader):
         userID = re.findall(weibo_pa, weibo_page.content.decode("utf-8", 'ignore'), re.S)[0]
         log.debug("欢迎你 %s," % userID)
 
+        return True, "SUCCESS"
+
 
     #以下待实现
-    def __get_trade_info(self):
-        """ 请求页面获取交易所需的 uid 和 password """
-        trade_info_response = self.s.get(self.config['trade_info_page'])
+    def __get_user_info(self):        
+        """ 请求页面获取用户信息"""
+        userinfo_response = self.s.get(self.config['userinfo']['api'], headers=self.headers)
 
-        # 查找登录信息
-        search_result = re.search(r'var data = "([/=\w\+]+)"', trade_info_response.text)
-        if not search_result:
-            return False
+        # 查找user id信息
+        usr_result_dct = js.loads(userinfo_response.content)            
+        usr_rst = usr_result_dct['result']['status']['code']
+        if 0 != usr_rst:
+            raise GetPageError('get usr info failed.[%d]' %usr_rst)
+        log.debug('usr info: ', usr_rst['result']['data'])            
+        return usr_rst['result']['data']
 
-        need_data_index = 0
-        need_data = search_result.groups()[need_data_index]
-        bytes_data = base64.b64decode(need_data)
-        log.debug('trade info bytes data: ', bytes_data)
-        try:
-            str_data = bytes_data.decode('gbk')
-        except UnicodeDecodeError:
-            str_data = bytes_data.decode('gb2312', errors='ignore')
-        log.debug('trade info: %s' % str_data)
-        json_data = json.loads(str_data)
-        return json_data
-
-    def __set_trade_need_info(self, json_data):
-        """设置交易所需的一些基本参数
-        :param json_data:登录成功返回的json数据
-        """
-        for account_info in json_data['item']:
-            if account_info['stock_account'].startswith('A'):
-                # 沪 A  股东代码以 A 开头，同时需要是数字，沪 B 帐号以 C 开头
-                if account_info['exchange_type'].isdigit():
-                    self.__sh_exchange_type = account_info['exchange_type']
-                self.__sh_stock_account = account_info['stock_account']
-                log.debug('sh_A stock account %s' % self.__sh_stock_account)
-            # 深 A 股东代码以 0 开头，深 B 股东代码以 2 开头
-            elif account_info['stock_account'].startswith('0'):
-                self.__sz_exchange_type = account_info['exchange_type']
-                self.__sz_stock_account = account_info['stock_account']
-                log.debug('sz_A stock account %s' % self.__sz_stock_account)
-
-        self.__fund_account = json_data['fund_account']
-        self.__client_risklevel = json_data['branch_no']
-        self.__op_station = json_data['op_station']
-        self.__trdpwd = json_data['trdpwd']
-        self.__uid = json_data['uid']
-        self.__branch_no = json_data['branch_no']
-
-    def cancel_entrust(self, entrust_no):
-        """撤单
-        :param entrust_no: 委托单号"""
-        cancel_params = dict(
-                self.config['cancel_entrust'],
-                entrust_no=entrust_no
+    def create_basic_params(self):
+        basic_params = OrderedDict(
+                sid=self.sid
         )
-        return self.do(cancel_params)
+        return basic_params
+
+    def request(self, params):
+
+        request_headers = self.headers.copy()
+
+        if params.has_key('Host'):            
+            request_headers.update('Host': params.pop('Host'))
+        if params.has_key('Referer'):
+            request_headers.update('Referer': params.pop('Referer'))
+
+        api = params.pop('api')        
+        
+        if six.PY2:
+            params_str = urllib.urlencode(params)
+            unquote_str = urllib.unquote(params_str)
+        else:
+            params_str = urllib.parse.urlencode(params)
+            unquote_str = urllib.parse.unquote(params_str)
+        log.debug('request params: %s' % unquote_str)
+        r = self.s.get('{prefix}/{api}'.format(prefix=self.trade_prefix, api=api), headers=headers)
+        return r.content
+
+    def format_response_data(self, data):
+        reg = re.compile(r'jsonp\(\((.*?)\)\);')
+        text = reg.sub(r"\1", text.decode('gbk') if six.PY2 else data)
+        text = text.replace(',', ',"').replace(':"', '":"').replace('{', '{"')        
+        return_data = json.loads(text)
+        log.debug('response data: %s' % return_data)
+        if not isinstance(return_data, dict):
+            return return_data        
+        return return_data
+
+    def fix_error_data(self, data):        
+        return data if hasattr(data, 'get') else data[data.index('new Boolean('): -1]
+
 
     # TODO: 实现买入卖出的各种委托类型
     def buy(self, stock_code, price, amount=0, volume=0, entrust_prop=0):
@@ -281,11 +272,18 @@ class SinaMoniTrader(WebTrader):
         :param volume: 买入总金额 由 volume / price 取 100 的整数， 若指定 amount 则此参数无效
         :param entrust_prop: 委托类型，暂未实现，默认为限价委托
         """
-        params = dict(
-                self.config['buy'],
-                entrust_amount=amount if amount else volume // price // 100 * 100
-        )
-        return self.__trade(stock_code, price, entrust_prop=entrust_prop, other=params)
+        referer = {}
+        referer.update({
+            "url": "http://jiaoyi.sina.com.cn/jy/myMatchBuy.php",
+            "cid": self.account_config['cid'],
+            "matchid": self.account_config['matchid']
+        })
+        params = self.config['buy']
+        params.update({"Referer": referer})
+
+        amount=amount if amount else volume // price // 100 * 100
+
+        return self.__trade(stock_code, price, amount=amount, entrust_prop=entrust_prop, other=params)
 
     def sell(self, stock_code, price, amount=0, volume=0, entrust_prop=0):
         """卖出股票
@@ -295,94 +293,93 @@ class SinaMoniTrader(WebTrader):
         :param volume: 卖出总金额 由 volume / price 取整， 若指定 amount 则此参数无效
         :param entrust_prop: 委托类型，暂未实现，默认为限价委托
         """
-        params = dict(
-                self.config['sell'],
-                entrust_amount=amount if amount else volume // price
-        )
-        return self.__trade(stock_code, price, entrust_prop=entrust_prop, other=params)
+        referer = {}
+        referer.update({
+            "url": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php",
+            "cid": self.account_config['cid'],
+            "matchid": self.account_config['matchid'],
+            "stockId": stock_code
+        })
+        params = self.config['sell']
+        params.update({"Referer": referer})
 
-    def __trade(self, stock_code, price, entrust_prop, other):
-        need_info = self.__get_trade_need_info(stock_code)
-        return self.do(dict(
-                other,
-                stock_account=need_info['stock_account'],  # '沪深帐号'
-                exchange_type=need_info['exchange_type'],  # '沪市1 深市2'
-                entrust_prop=entrust_prop,  # 委托方式
-                stock_code='{:0>6}'.format(stock_code),  # 股票代码, 右对齐宽为6左侧填充0
-                entrust_price=price
-        ))
+        entrust_amount=amount if amount else volume // price
+        return self.__trade(stock_code, price, amount=entrust_amount, entrust_prop=entrust_prop, other=params)
 
-    def __get_trade_need_info(self, stock_code):
-        """获取股票对应的证券市场和帐号"""
-        # 获取股票对应的证券市场
-        exchange_type = self.__sh_exchange_type if helpers.get_stock_type(stock_code) == 'sh' \
-            else self.__sz_exchange_type
-        # 获取股票对应的证券帐号
-        stock_account = self.__sh_stock_account if exchange_type == self.__sh_exchange_type \
-            else self.__sz_stock_account
-        return dict(
-                exchange_type=exchange_type,
-                stock_account=stock_account
-        )
+    def __trade(self, stock_code, price, amount, entrust_prop, other):
+        params = other
+        params.update({            
+            "cid": self.account_config['cid'],
+            "symbol": '{:0>6}'.format(stock_code),
+            "price": price,
+            "amount": amount
+        })
+        return self.do(params)
 
-    def create_basic_params(self):
-        basic_params = OrderedDict(
-                uid=self.__uid,
-                version=1,
-                custid=self.account_config['userName'],
-                op_branch_no=self.__branch_no,
-                branch_no=self.__branch_no,
-                op_entrust_way=7,
-                op_station=self.__op_station,
-                fund_account=self.fund_account,
-                password=self.__trdpwd,
-                identity_type='',
-                ram=random.random()
-        )
-        return basic_params
 
-    def request(self, params):
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko'
-        }
-        if six.PY2:
-            item = params.pop('ram')
-            params['ram'] = item
-        else:
-            params.move_to_end('ram')
-        if six.PY2:
-            params_str = urllib.urlencode(params)
-            unquote_str = urllib.unquote(params_str)
-        else:
-            params_str = urllib.parse.urlencode(params)
-            unquote_str = urllib.parse.unquote(params_str)
-        log.debug('request params: %s' % unquote_str)
-        b64params = base64.b64encode(unquote_str.encode()).decode()
-        r = self.s.get('{prefix}/?{b64params}'.format(prefix=self.trade_prefix, b64params=b64params), headers=headers)
-        return r.content
+    def cancel_entrust(self, entrust_no):
+        """撤单
+        :param entrust_no: 委托单号"""        
+        params = self.config['cancel_entrust'].copy()
+        params.update({
+            "cid": self.account_config['cid'],
+            "order_id": entrust_no,
+            "Host": self.config['host'],            
+        })
 
-    def format_response_data(self, data):
-        bytes_str = base64.b64decode(data)
-        gbk_str = bytes_str.decode('gbk')
-        log.debug('response data before format: %s' % gbk_str)
-        filter_empty_list = gbk_str.replace('[]', 'null')
-        filter_return = filter_empty_list.replace('\n', '')
-        log.debug('response data: %s' % filter_return)
-        response_data = json.loads(filter_return)
-        if response_data['cssweb_code'] == 'error' or response_data['item'] is None:
-            return response_data
-        return_data = self.format_response_data_type(response_data['item'])
-        log.debug('response data: %s' % return_data)
-        return return_data
+        referer = {}
+        referer.update({
+            "url": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php"
+            "cid": self.account_config['cid'],
+            "matchid": self.account_config['matchid']
+        })
+        params.update({"Referer": referer})
 
-    def fix_error_data(self, data):
-        last_no_use_info_index = -1
-        return data if hasattr(data, 'get') else data[:last_no_use_info_index]
+        return self.do(params)
 
-    @property
-    def exchangebill(self):
-        start_date, end_date = helpers.get_30_date()
-        return self.get_exchangebill(start_date, end_date)
+    def get_balance(self):
+        """获取账户资金状况"""
+        params = self.config['balance'].copy()
+        params.update({
+            "contest_id": end_date,
+        })
+        return self.do(params)     
+
+    def get_position(self):
+        """获取持仓"""
+        params = self.config['position'].copy()
+        params.update({
+            "cid": self.account_config['cid'],
+            "count": 100
+        })
+        return self.do(params)
+
+    def get_entrust(self):
+        """获取当日委托列表"""
+        today = datetime.datetime.today().strftime("%Y-%m-%d")               
+        
+        params = self.config['entrust'].copy()
+        params.update({
+            "cid": self.account_config['cid'],
+            "sdate": today,
+            "edate": today,
+            "from": 0,
+            "count": "100",
+            "sort": "1"
+        })
+        return self.do(params)
+
+    def get_current_deal(self):
+        """获取当日成交列表"""
+        params = self.config['deal'].copy()
+        params.update({
+            "cid": self.account_config['cid'],
+            "sdate": today,
+            "edate": today,
+            "from": 0,
+            "count": "100",
+            "sort": "1"
+        })
 
     def get_exchangebill(self, start_date, end_date):
         """
@@ -390,10 +387,13 @@ class SinaMoniTrader(WebTrader):
         :param start_date: 20160211
         :param end_date: 20160211
         :return:
-        """
+        """        
         params = self.config['exchangebill'].copy()
         params.update({
-            "start_date": start_date,
-            "end_date": end_date,
+            "cid": self.account_config['cid'],
+            "sdate": start_date,
+            "edate": end_date,
+            "from": 0,
+            "count": "100",
+            "sort": "1"
         })
-        return self.do(params)

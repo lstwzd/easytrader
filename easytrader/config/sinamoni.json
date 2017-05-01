@@ -1,11 +1,11 @@
 {
   "login_api": "http://weibo.com/login.php",  
   "prefix": "http://jiaoyi.sina.com.cn/api/jsonp_v2.php/jsonp",
+  "host": "jiaoyi.sina.com.cn",
 
   "userinfo": {
-    "api": "Common_Service.getMatchinfoByMatchid",
-    "matchid": "1",
-  },  
+    "api": "http://jiaoyi.sina.com.cn/api/openapi.php/User_Service.getUserInfo"
+  },
   "position": {
     "api": "V2_CN_Stockhold_Service.getStockhold",
     "sid": "",
@@ -20,8 +20,7 @@
   "entrust": {
     "api": "V2_CN_Order_Service.getOrder",
     "sid": "",
-    "cid": "",
-    "count": "",
+    "cid": "",    
     "sdate": "2017-04-16",
     "edate": "",
     "from": "0",
@@ -38,7 +37,8 @@
     "amount": "",
     "toweibo": "0",
     "enc": "utf8",
-    "Referer": {
+    "Host": "jiaoyi.sina.com.cn",
+    "Referer": {        
         "url": "http://jiaoyi.sina.com.cn/jy/myMatchBuy.php",
         "matchid": "1",
         "cid": ""
@@ -52,7 +52,8 @@
     "symbol": "",
     "price": "",
     "amount": "",
-    "toweibo": "0",    
+    "toweibo": "0",
+    "Host": "jiaoyi.sina.com.cn",
     "Referer": {
         "url": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php",
         "matchid": "1",
@@ -64,7 +65,13 @@
     "api": "Order_Service.cancel",    
     "sid": "",
     "cid": "",
-    "order_id": ""    
+    "order_id": "",
+    "Host": "jiaoyi.sina.com.cn",
+    "Referer": {
+        "url": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php",
+        "matchid": "1",        
+        "cid": ""
+    }  
   },
   "deal": {
     "api": "Transaction_Service.getTransaction",
