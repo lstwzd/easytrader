@@ -12,6 +12,8 @@ import urllib
 import uuid
 from collections import OrderedDict
 import tempfile
+import demjson
+import datetime
 
 import requests
 import six
@@ -98,7 +100,7 @@ class SinaMoniTrader(WebTrader):
         pre_url = "http://login.sina.com.cn/sso/prelogin.php?entry=weibo&callback=sinaSSOController.preloginCallBack&su="
         pre_url = pre_url + su + "&rsakt=mod&checkpin=1&client=ssologin.js(v1.4.18)&_="
         pre_url = pre_url + str(int(time.time() * 1000))
-        pre_data_res = session.get(pre_url, headers=headers)
+        pre_data_res = self.s.get(pre_url, headers=self.headers)
 
         sever_data = eval(pre_data_res.content.decode("utf-8").replace("sinaSSOController.preloginCallBack", ''))
         return sever_data
@@ -150,6 +152,8 @@ class SinaMoniTrader(WebTrader):
         except:
             pass
 
+        username = self.account_config['username']
+        password = self.account_config['password']
         # su 是加密后的用户名
         su = self.__get_su(username)
         sever_data = self.__get_server_data(su)
@@ -183,24 +187,24 @@ class SinaMoniTrader(WebTrader):
             }
         login_url = 'http://login.sina.com.cn/sso/login.php?client=ssologin.js(v1.4.18)'
         if showpin == 0:
-            login_page = session.post(login_url, data=postdata, headers=headers)
+            login_page = self.s.post(login_url, data=postdata, headers=self.headers)
         else:
             pcid = sever_data["pcid"]
             self.__get_cha(pcid)
             postdata['door'] = input(u"请输入验证码")
-            login_page = session.post(login_url, data=postdata, headers=headers)
+            login_page = self.s.post(login_url, data=postdata, headers=self.headers)
         login_loop = (login_page.content.decode("GBK"))
         # print(login_loop)
         pa = r'location\.replace\([\'"](.*?)[\'"]\)'
         loop_url = re.findall(pa, login_loop)[0]
         # print(loop_url)
         # 此出还可以加上一个是否登录成功的判断，下次改进的时候写上
-        login_index = session.get(loop_url, headers=headers)
+        login_index = self.s.get(loop_url, headers=self.headers)
         uuid = login_index.text
         uuid_pa = r'"uniqueid":"(.*?)"'
         uuid_res = re.findall(uuid_pa, uuid, re.S)[0]
         web_weibo_url = "http://weibo.com/%s/profile?topnav=1&wvr=6&is_all=1" % uuid_res
-        weibo_page = session.get(web_weibo_url, headers=headers)
+        weibo_page = self.s.get(web_weibo_url, headers=self.headers)
         weibo_pa = r'<title>(.*?)</title>'
         # print(weibo_page.content.decode("utf-8"))
         userID = re.findall(weibo_pa, weibo_page.content.decode("utf-8", 'ignore'), re.S)[0]
@@ -208,23 +212,23 @@ class SinaMoniTrader(WebTrader):
 
         return True, "SUCCESS"
 
-
-    #以下待实现
     def __get_user_info(self):        
         """ 请求页面获取用户信息"""
-        userinfo_response = self.s.get(self.config['userinfo']['api'], headers=self.headers)
-
+        userinfo_response = self.s.get(self.config['userinfo']['api'], headers=self.headers)        
         # 查找user id信息
-        usr_result_dct = js.loads(userinfo_response.content)            
+        usr_result_dct = json.loads(userinfo_response.content)        
         usr_rst = usr_result_dct['result']['status']['code']
         if 0 != usr_rst:
             raise GetPageError('get usr info failed.[%d]' %usr_rst)
-        log.debug('usr info: ', usr_rst['result']['data'])            
-        return usr_rst['result']['data']
+        log.debug('usr info: %s' %usr_result_dct['result']['data'])
+
+        self.__sid = usr_result_dct['result']['data']['sid']        
+        self.__usrinfo = usr_result_dct['result']['data']    
+        return self.__usrinfo
 
     def create_basic_params(self):
         basic_params = OrderedDict(
-                sid=self.sid
+                sid=self.__sid
         )
         return basic_params
 
@@ -233,12 +237,14 @@ class SinaMoniTrader(WebTrader):
         request_headers = self.headers.copy()
 
         if params.has_key('Host'):            
-            request_headers.update('Host': params.pop('Host'))
+            request_headers.update({'Host': params.pop('Host')})
         if params.has_key('Referer'):
-            request_headers.update('Referer': params.pop('Referer'))
+            request_headers.update({'Referer': params.pop('Referer')})
+        if params.has_key('sid'):
+            params.update({'sid': self.__sid})
 
-        api = params.pop('api')        
-        
+        api = params.pop('api')
+
         if six.PY2:
             params_str = urllib.urlencode(params)
             unquote_str = urllib.unquote(params_str)
@@ -246,14 +252,13 @@ class SinaMoniTrader(WebTrader):
             params_str = urllib.parse.urlencode(params)
             unquote_str = urllib.parse.unquote(params_str)
         log.debug('request params: %s' % unquote_str)
-        r = self.s.get('{prefix}/{api}'.format(prefix=self.trade_prefix, api=api), headers=headers)
-        return r.content
+        r = self.s.get(url='{prefix}/{api}'.format(prefix=self.trade_prefix, api=api), params=params, headers=request_headers)            
+        return r.text
 
     def format_response_data(self, data):
         reg = re.compile(r'jsonp\(\((.*?)\)\);')
-        text = reg.sub(r"\1", text.decode('gbk') if six.PY2 else data)
-        text = text.replace(',', ',"').replace(':"', '":"').replace('{', '{"')        
-        return_data = json.loads(text)
+        text = reg.sub(r"\1", data.decode('gbk') if six.PY3 else data)
+        return_data = demjson.decode(text)        
         log.debug('response data: %s' % return_data)
         if not isinstance(return_data, dict):
             return return_data        
@@ -329,7 +334,7 @@ class SinaMoniTrader(WebTrader):
 
         referer = {}
         referer.update({
-            "url": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php"
+            "url": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php",
             "cid": self.account_config['cid'],
             "matchid": self.account_config['matchid']
         })
@@ -341,7 +346,7 @@ class SinaMoniTrader(WebTrader):
         """获取账户资金状况"""
         params = self.config['balance'].copy()
         params.update({
-            "contest_id": end_date,
+            "contest_id": self.account_config['cid'],
         })
         return self.do(params)     
 
@@ -371,6 +376,8 @@ class SinaMoniTrader(WebTrader):
 
     def get_current_deal(self):
         """获取当日成交列表"""
+        today = datetime.datetime.today().strftime("%Y-%m-%d")               
+        
         params = self.config['deal'].copy()
         params.update({
             "cid": self.account_config['cid'],
