@@ -265,16 +265,20 @@ class SinaMoniTrader(WebTrader):
         return r.text
 
     def format_response_data(self, data):
-        reg = re.compile(r'jsonp\(\((.*?)\)\);')
-        text = reg.sub(r"\1", data.decode('gbk') if six.PY3 else data)
-        return_data = demjson.decode(text)
-        log.debug('response data: %s' % return_data)
-        if not isinstance(return_data, dict):
+        if -1 != str(data).find('new Boolean('):
+            return_data = str(data)[str(data).rfind('(') + 1:-4]
             return return_data
-        return return_data
+        else:
+            reg = re.compile(r'jsonp\(\((.*?)\)\);')
+            text = reg.sub(r"\1", data.decode('gbk') if six.PY3 else data)
+            return_data = demjson.decode(text)
+            log.debug('response data: %s' % return_data)
+            if not isinstance(return_data, dict):
+                return return_data
+            return return_data
 
     def fix_error_data(self, data):
-        return data if hasattr(data, 'get') else data[data.index('new Boolean('): -1]
+        return data
 
     # TODO: 实现买入卖出的各种委托类型
     def buy(self, stock_code, price, amount=0, volume=0, entrust_prop=0):
