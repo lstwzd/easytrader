@@ -36,6 +36,7 @@ from .webtrader import WebTrader, NotLoginError
 
 
 class GetPageError(Exception):
+
     def __init__(self, result=None):
         super(GetPageError, self).__init__()
         self.result = result
@@ -66,7 +67,7 @@ log.debug = remove_heart_log
 
 
 class SinaMoniTrader(WebTrader):
-    config_path = os.path.dirname(__file__) + '/config/sinamoni.json'
+    config_path = os.path.dirname(__file__) + '/config/sm.json'
 
     def __init__(self):
         super(SinaMoniTrader, self).__init__()
@@ -82,8 +83,8 @@ class SinaMoniTrader(WebTrader):
             raise NotLoginError(result)
 
         self.usr_info = self.__get_user_info()
-        
-        return True        
+
+        return True
 
     def __get_su(self, username):
         """
@@ -98,18 +99,21 @@ class SinaMoniTrader(WebTrader):
     # 预登陆获得 servertime, nonce, pubkey, rsakv
     def __get_server_data(self, su):
         pre_url = "http://login.sina.com.cn/sso/prelogin.php?entry=weibo&callback=sinaSSOController.preloginCallBack&su="
-        pre_url = pre_url + su + "&rsakt=mod&checkpin=1&client=ssologin.js(v1.4.18)&_="
+        pre_url = pre_url + su + \
+            "&rsakt=mod&checkpin=1&client=ssologin.js(v1.4.18)&_="
         pre_url = pre_url + str(int(time.time() * 1000))
         pre_data_res = self.s.get(pre_url, headers=self.headers)
 
-        sever_data = eval(pre_data_res.content.decode("utf-8").replace("sinaSSOController.preloginCallBack", ''))
+        sever_data = eval(pre_data_res.content.decode(
+            "utf-8").replace("sinaSSOController.preloginCallBack", ''))
         return sever_data
         # print(sever_data)
 
     def __get_password(self, password, servertime, nonce, pubkey):
         rsaPublickey = int(pubkey, 16)
         key = rsa.PublicKey(rsaPublickey, 65537)  # 创建公钥
-        message = str(servertime) + '\t' + str(nonce) + '\n' + str(password)  # 拼接明文js加密文件中得到
+        message = str(servertime) + '\t' + str(nonce) + \
+            '\n' + str(password)  # 拼接明文js加密文件中得到
         message = message.encode("utf-8")
         passwd = rsa.encrypt(message, key)  # 加密
         passwd = binascii.b2a_hex(passwd)  # 将加密信息转换为16进制。
@@ -130,7 +134,6 @@ class SinaMoniTrader(WebTrader):
         except:
             print(u"请到当前目录下，找到验证码后输入")
 
-
     def __go_sina_login(self):
 
         # 构造 Request headers
@@ -142,7 +145,7 @@ class SinaMoniTrader(WebTrader):
         self.s = requests.session()
 
         # 访问 初始页面带上 cookie
-        index_url = self.config['login_api'] 
+        index_url = self.config['login_api']
         try:
             self.s.get(index_url, headers=self.headers, timeout=2)
         except:
@@ -162,7 +165,8 @@ class SinaMoniTrader(WebTrader):
         rsakv = sever_data["rsakv"]
         pubkey = sever_data["pubkey"]
         showpin = sever_data["showpin"]
-        password_secret = self.__get_password(password, servertime, nonce, pubkey)
+        password_secret = self.__get_password(
+            password, servertime, nonce, pubkey)
 
         postdata = {
             'entry': 'weibo',
@@ -184,15 +188,17 @@ class SinaMoniTrader(WebTrader):
             'prelt': '115',
             'url': 'http://weibo.com/ajaxlogin.php?framelogin=1&callback=parent.sinaSSOController.feedBackUrlCallBack',
             'returntype': 'META'
-            }
+        }
         login_url = 'http://login.sina.com.cn/sso/login.php?client=ssologin.js(v1.4.18)'
         if showpin == 0:
-            login_page = self.s.post(login_url, data=postdata, headers=self.headers)
+            login_page = self.s.post(
+                login_url, data=postdata, headers=self.headers)
         else:
             pcid = sever_data["pcid"]
             self.__get_cha(pcid)
             postdata['door'] = input(u"请输入验证码")
-            login_page = self.s.post(login_url, data=postdata, headers=self.headers)
+            login_page = self.s.post(
+                login_url, data=postdata, headers=self.headers)
         login_loop = (login_page.content.decode("GBK"))
         # print(login_loop)
         pa = r'location\.replace\([\'"](.*?)[\'"]\)'
@@ -207,28 +213,30 @@ class SinaMoniTrader(WebTrader):
         weibo_page = self.s.get(web_weibo_url, headers=self.headers)
         weibo_pa = r'<title>(.*?)</title>'
         # print(weibo_page.content.decode("utf-8"))
-        userID = re.findall(weibo_pa, weibo_page.content.decode("utf-8", 'ignore'), re.S)[0]
+        userID = re.findall(weibo_pa, weibo_page.content.decode(
+            "utf-8", 'ignore'), re.S)[0]
         log.debug("欢迎你 %s," % userID)
 
         return True, "SUCCESS"
 
-    def __get_user_info(self):        
+    def __get_user_info(self):
         """ 请求页面获取用户信息"""
-        userinfo_response = self.s.get(self.config['userinfo']['api'], headers=self.headers)        
+        userinfo_response = self.s.get(self.config['userinfo'][
+                                       'api'], headers=self.headers)
         # 查找user id信息
-        usr_result_dct = json.loads(userinfo_response.content)        
+        usr_result_dct = json.loads(userinfo_response.content)
         usr_rst = usr_result_dct['result']['status']['code']
         if 0 != usr_rst:
-            raise GetPageError('get usr info failed.[%d]' %usr_rst)
-        log.debug('usr info: %s' %usr_result_dct['result']['data'])
+            raise GetPageError('get usr info failed.[%d]' % usr_rst)
+        log.debug('usr info: %s' % usr_result_dct['result']['data'])
 
-        self.__sid = usr_result_dct['result']['data']['sid']        
-        self.__usrinfo = usr_result_dct['result']['data']    
+        self.__sid = usr_result_dct['result']['data']['sid']
+        self.__usrinfo = usr_result_dct['result']['data']
         return self.__usrinfo
 
     def create_basic_params(self):
         basic_params = OrderedDict(
-                sid=self.__sid
+            sid=self.__sid
         )
         return basic_params
 
@@ -236,7 +244,7 @@ class SinaMoniTrader(WebTrader):
 
         request_headers = self.headers.copy()
 
-        if params.has_key('Host'):            
+        if params.has_key('Host'):
             request_headers.update({'Host': params.pop('Host')})
         if params.has_key('Referer'):
             request_headers.update({'Referer': params.pop('Referer')})
@@ -252,21 +260,21 @@ class SinaMoniTrader(WebTrader):
             params_str = urllib.parse.urlencode(params)
             unquote_str = urllib.parse.unquote(params_str)
         log.debug('request params: %s' % unquote_str)
-        r = self.s.get(url='{prefix}/{api}'.format(prefix=self.trade_prefix, api=api), params=params, headers=request_headers)            
+        r = self.s.get(url='{prefix}/{api}'.format(prefix=self.trade_prefix,
+                                                   api=api), params=params, headers=request_headers)
         return r.text
 
     def format_response_data(self, data):
         reg = re.compile(r'jsonp\(\((.*?)\)\);')
         text = reg.sub(r"\1", data.decode('gbk') if six.PY3 else data)
-        return_data = demjson.decode(text)        
+        return_data = demjson.decode(text)
         log.debug('response data: %s' % return_data)
         if not isinstance(return_data, dict):
-            return return_data        
+            return return_data
         return return_data
 
-    def fix_error_data(self, data):        
+    def fix_error_data(self, data):
         return data if hasattr(data, 'get') else data[data.index('new Boolean('): -1]
-
 
     # TODO: 实现买入卖出的各种委托类型
     def buy(self, stock_code, price, amount=0, volume=0, entrust_prop=0):
@@ -277,16 +285,15 @@ class SinaMoniTrader(WebTrader):
         :param volume: 买入总金额 由 volume / price 取 100 的整数， 若指定 amount 则此参数无效
         :param entrust_prop: 委托类型，暂未实现，默认为限价委托
         """
-        referer = {}
-        referer.update({
-            "url": "http://jiaoyi.sina.com.cn/jy/myMatchBuy.php",
-            "cid": self.account_config['cid'],
-            "matchid": self.account_config['matchid']
-        })
-        params = self.config['buy']
+        params = self.config['jiaoyisuo'][
+            self.account_config['matchid']]['buy'].copy()
+
+        referer = self.config['jiaoyisuo'][self.account_config[
+            'matchid']]['buy']['Referer'].format(
+            mid=self.account_config['matchid'], cid=self.account_config['cid'])
         params.update({"Referer": referer})
 
-        amount=amount if amount else volume // price // 100 * 100
+        amount = amount if amount else volume // price // 100 * 100
 
         return self.__trade(stock_code, price, amount=amount, entrust_prop=entrust_prop, other=params)
 
@@ -298,22 +305,21 @@ class SinaMoniTrader(WebTrader):
         :param volume: 卖出总金额 由 volume / price 取整， 若指定 amount 则此参数无效
         :param entrust_prop: 委托类型，暂未实现，默认为限价委托
         """
-        referer = {}
-        referer.update({
-            "url": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php",
-            "cid": self.account_config['cid'],
-            "matchid": self.account_config['matchid'],
-            "stockId": stock_code
-        })
-        params = self.config['sell']
+        params = self.config['jiaoyisuo'][
+            self.account_config['matchid']]['sell'].copy()
+
+        referer = self.config['jiaoyisuo'][self.account_config[
+            'matchid']]['sell']['Referer'].format(
+            mid=self.account_config['matchid'], cid=self.account_config['cid'], stock=stock_code)
+
         params.update({"Referer": referer})
 
-        entrust_amount=amount if amount else volume // price
+        entrust_amount = amount if amount else volume // price
         return self.__trade(stock_code, price, amount=entrust_amount, entrust_prop=entrust_prop, other=params)
 
     def __trade(self, stock_code, price, amount, entrust_prop, other):
         params = other
-        params.update({            
+        params.update({
             "cid": self.account_config['cid'],
             "symbol": '{:0>6}'.format(stock_code),
             "price": price,
@@ -321,23 +327,21 @@ class SinaMoniTrader(WebTrader):
         })
         return self.do(params)
 
-
     def cancel_entrust(self, entrust_no):
         """撤单
-        :param entrust_no: 委托单号"""        
-        params = self.config['cancel_entrust'].copy()
+        :param entrust_no: 委托单号"""
+        params = self.config['jiaoyisuo'][self.account_config[
+            'matchid']]['cancel_entrust'].copy()
         params.update({
             "cid": self.account_config['cid'],
             "order_id": entrust_no,
-            "Host": self.config['host'],            
+            "Host": self.config['host'],
         })
 
-        referer = {}
-        referer.update({
-            "url": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php",
-            "cid": self.account_config['cid'],
-            "matchid": self.account_config['matchid']
-        })
+        referer = self.config['jiaoyisuo'][self.account_config[
+            'matchid']]['cancel_entrust']['Referer'].format(
+            mid=self.account_config['matchid'], cid=self.account_config['cid'])
+
         params.update({"Referer": referer})
 
         return self.do(params)
@@ -348,11 +352,12 @@ class SinaMoniTrader(WebTrader):
         params.update({
             "contest_id": self.account_config['cid'],
         })
-        return self.do(params)     
+        return self.do(params)
 
     def get_position(self):
         """获取持仓"""
-        params = self.config['position'].copy()
+        params = self.config['jiaoyisuo'][
+            self.account_config['matchid']]['position'].copy()
         params.update({
             "cid": self.account_config['cid'],
             "count": 100
@@ -361,9 +366,10 @@ class SinaMoniTrader(WebTrader):
 
     def get_entrust(self):
         """获取当日委托列表"""
-        today = datetime.datetime.today().strftime("%Y-%m-%d")               
-        
-        params = self.config['entrust'].copy()
+        today = datetime.datetime.today().strftime("%Y-%m-%d")
+
+        params = self.config['jiaoyisuo'][
+            self.account_config['matchid']]['entrust'].copy()
         params.update({
             "cid": self.account_config['cid'],
             "sdate": today,
@@ -376,9 +382,10 @@ class SinaMoniTrader(WebTrader):
 
     def get_current_deal(self):
         """获取当日成交列表"""
-        today = datetime.datetime.today().strftime("%Y-%m-%d")               
-        
-        params = self.config['deal'].copy()
+        today = datetime.datetime.today().strftime("%Y-%m-%d")
+
+        params = self.config['jiaoyisuo'][
+            self.account_config['matchid']]['deal'].copy()
         params.update({
             "cid": self.account_config['cid'],
             "sdate": today,
@@ -394,8 +401,9 @@ class SinaMoniTrader(WebTrader):
         :param start_date: 20160211
         :param end_date: 20160211
         :return:
-        """        
-        params = self.config['exchangebill'].copy()
+        """
+        params = self.config['jiaoyisuo'][self.account_config[
+            'matchid']]['exchangebill'].copy()
         params.update({
             "cid": self.account_config['cid'],
             "sdate": start_date,

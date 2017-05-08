@@ -1,0 +1,238 @@
+{
+  "login_api": "http://weibo.com/login.php",  
+  "prefix": "http://jiaoyi.sina.com.cn/api/jsonp_v2.php/jsonp",
+  "host": "jiaoyi.sina.com.cn",
+
+  "userinfo": {
+    "api": "http://jiaoyi.sina.com.cn/api/openapi.php/User_Service.getUserInfo"
+  },
+  "balance": {
+    "api": "Account_Service.getAccountinfo",  
+    "sid": "",
+    "contest_id": ""
+  },  
+  "jiaoyisuo": {    
+    "1" : {
+      "exchage" : "CN",
+      "position": {
+          "api": "V2_CN_Stockhold_Service.getStockhold",
+          "sid": "",
+          "cid": "",
+          "count": ""
+      },
+      "entrust": {
+        "api": "V2_CN_Order_Service.getOrder",
+        "sid": "",
+        "cid": "",    
+        "sdate": "2017-04-16",
+        "edate": "",
+        "from": "0",
+        "count": "10",
+        "sort": "1"
+      },
+      "buy": {
+        "api": "V2_CN_Order_Service.order",
+        "type": "buy",
+        "sid": "",
+        "cid": "",
+        "symbol": "",
+        "price": "",
+        "amount": "",
+        "toweibo": "0",
+        "enc": "utf8",
+        "Host": "jiaoyi.sina.com.cn",
+        "Referer": "http://jiaoyi.sina.com.cn/jy/myMatchBuy.php?matchid={mid}&cid={cid}"
+      },
+      "sell": {
+        "api": "V2_CN_Order_Service.order",
+        "type": "sell",
+        "sid": "",
+        "cid": "",
+        "symbol": "",
+        "price": "",
+        "amount": "",
+        "toweibo": "0",
+        "Host": "jiaoyi.sina.com.cn",
+        "Referer": "http://jiaoyi.sina.com.cn/jy/myMatchSell.php?matchid={mid}&cid={cid}&stockId={stock}"
+      }, 
+      "cancel_entrust": {
+        "api": "Order_Service.cancel",    
+        "sid": "",
+        "cid": "",
+        "order_id": "",
+        "Host": "jiaoyi.sina.com.cn",
+        "Referer": "http://jiaoyi.sina.com.cn/jy/myMatchBuy.php?matchid={mid}&cid={cid}"
+      },
+      "deal": {
+        "api": "Transaction_Service.getTransaction",
+        "sid": "",
+        "cid": "",    
+        "sdate": "today",
+        "edate": "today",
+        "count": "",
+        "from": "0",
+        "count": "10",
+        "sort": "1"
+      },
+      "exchangebill":{
+        "api": "Statement_Service.getStatement",
+        "sid": "",
+        "cid": "",    
+        "sdate": "",
+        "edate": "",
+        "count": "",
+        "from": "0",
+        "count": "10",
+        "sort": "1"
+      }
+    },
+    "41" : {
+      "exchage" : "HK",
+      "position": {
+          "api": "V2_HK_Stockhold_Service.getStockhold",
+          "sid": "",
+          "cid": "",
+          "count": ""
+      },
+      "entrust": {
+        "api": "V2_HK_Order_Service.getOrder",
+        "sid": "",
+        "cid": "",    
+        "sdate": "2017-04-16",
+        "edate": "",
+        "from": "0",
+        "count": "10",
+        "sort": "1"
+      },
+      "buy": {
+        "api": "V2_HK_Order_Service.order",
+        "type": "buy",
+        "sid": "",
+        "cid": "",
+        "symbol": "",
+        "price": "",
+        "amount": "",
+        "toweibo": "0",
+        "enc": "utf8",
+        "Host": "jiaoyi.sina.com.cn",
+        "Referer": "http://jiaoyi.sina.com.cn/jy/myMatchBuy_HK.php?matchid={mid}&cid={cid}"        
+      },
+      "sell": {
+        "api": "V2_HK_Order_Service.order",
+        "type": "sell",
+        "sid": "",
+        "cid": "",
+        "symbol": "",
+        "price": "",
+        "amount": "",
+        "toweibo": "0",
+        "Host": "jiaoyi.sina.com.cn",
+        "Referer": "http://jiaoyi.sina.com.cn/jy/myMatchSell_HK.php?matchid={mid}&cid={cid}&stockId={stock}"
+      }, 
+      "cancel_entrust": {
+        "api": "V2_HK_Order_Service.cancel",    
+        "sid": "",
+        "cid": "",
+        "order_id": "",
+        "Host": "jiaoyi.sina.com.cn",        
+        "Referer": "http://jiaoyi.sina.com.cn/jy/myMatchBuy_HK.php?matchid={mid}&cid={cid}" 
+      },
+      "deal": {
+        "api": "V2_HK_Transaction_Service.getTransaction",
+        "sid": "",
+        "cid": "",    
+        "sdate": "today",
+        "edate": "today",
+        "count": "",
+        "from": "0",
+        "count": "10",
+        "sort": "1"
+      },
+      "exchangebill":{
+        "api": "V2_HK_Statement_Service.getStatement",
+        "sid": "",
+        "cid": "",    
+        "sdate": "",
+        "edate": "",
+        "count": "",
+        "from": "0",
+        "count": "10",
+        "sort": "1"
+      }
+    },
+    "81" : {
+      "exchage" : "US",
+      "position": {
+          "api": "V2_US_Stockhold_Service.getStockhold",
+          "sid": "",
+          "cid": "",
+          "count": ""
+      },
+      "entrust": {
+        "api": "V2_US_Order_Service.getOrder",
+        "sid": "",
+        "cid": "",    
+        "sdate": "2017-04-16",
+        "edate": "",
+        "from": "0",
+        "count": "10",
+        "sort": "1"
+      },
+      "buy": {
+        "api": "V2_US_Order_Service.order",
+        "type": "buy",
+        "sid": "",
+        "cid": "",
+        "symbol": "",
+        "price": "",
+        "amount": "",
+        "toweibo": "0",
+        "enc": "utf8",
+        "Host": "jiaoyi.sina.com.cn",
+        "Referer": "http://jiaoyi.sina.com.cn/jy/myMatchBuy_US.php?matchid={mid}&cid={cid}"        
+      },
+      "sell": {
+        "api": "V2_US_Order_Service.order",
+        "type": "sell",
+        "sid": "",
+        "cid": "",
+        "symbol": "",
+        "price": "",
+        "amount": "",
+        "toweibo": "0",
+        "Host": "jiaoyi.sina.com.cn",
+        "Referer": "http://jiaoyi.sina.com.cn/jy/myMatchSell_US.php?matchid={mid}&cid={cid}&stockId={stock}"
+      }, 
+      "cancel_entrust": {
+        "api": "V2_US_Order_Service.cancel",    
+        "sid": "",
+        "cid": "",
+        "order_id": "",
+        "Host": "jiaoyi.sina.com.cn",        
+        "Referer": "http://jiaoyi.sina.com.cn/jy/myMatchBuy_US.php?matchid={mid}&cid={cid}" 
+      },
+      "deal": {
+        "api": "V2_US_Transaction_Service.getTransaction",
+        "sid": "",
+        "cid": "",    
+        "sdate": "today",
+        "edate": "today",
+        "count": "",
+        "from": "0",
+        "count": "10",
+        "sort": "1"
+      },
+      "exchangebill":{
+        "api": "V2_US_Statement_Service.getStatement",
+        "sid": "",
+        "cid": "",    
+        "sdate": "",
+        "edate": "",
+        "count": "",
+        "from": "0",
+        "count": "10",
+        "sort": "1"
+      }
+    }
+  }
+}
